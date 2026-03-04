@@ -1,0 +1,89 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# ── Bootstrap ──────────────────────────────────────────────────
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+source "$SCRIPT_DIR/lib/utils.sh"
+
+# ── Usage ──────────────────────────────────────────────────────
+
+usage() {
+  cat <<EOF
+corpo-claude $CORPO_VERSION — Standardize Claude Code configuration across teams
+
+Usage:
+  corpo-claude <command> [options]
+
+Commands:
+  init        Set up provider, MCP servers, user CLAUDE.md, hooks, skills (user scope)
+  scaffold    Generate .claude/ folder in current directory (project scope)
+  preview     Show what would be written without doing it (read-only)
+
+Options:
+  --profile <name>   Profile(s) to apply (can be repeated; omit for interactive picker)
+  --help, -h         Show this help message
+  --version, -v      Show version
+
+Examples:
+  corpo-claude init --profile backend --profile company
+  corpo-claude scaffold --profile backend
+  corpo-claude preview
+EOF
+}
+
+# ── Main ───────────────────────────────────────────────────────
+
+main() {
+  # Handle no arguments
+  if [[ $# -eq 0 ]]; then
+    usage
+    exit 0
+  fi
+
+  # Handle top-level flags before dependency check
+  case "${1:-}" in
+    --help|-h)
+      usage
+      exit 0
+      ;;
+    --version|-v)
+      echo "corpo-claude $CORPO_VERSION"
+      exit 0
+      ;;
+  esac
+
+  # Check dependencies
+  check_all_dependencies
+
+  # Source remaining library files
+  source "$SCRIPT_DIR/lib/profiles.sh"
+  source "$SCRIPT_DIR/lib/preview.sh"
+  source "$SCRIPT_DIR/lib/init.sh"
+  source "$SCRIPT_DIR/lib/scaffold.sh"
+
+  # Route subcommands
+  local cmd="$1"
+  shift
+
+  case "$cmd" in
+    init)
+      cmd_init "$@"
+      ;;
+    scaffold)
+      cmd_scaffold "$@"
+      ;;
+    preview)
+      cmd_preview "$@"
+      ;;
+    *)
+      error "Unknown command: $cmd"
+      echo ""
+      usage
+      exit 1
+      ;;
+  esac
+}
+
+main "$@"
