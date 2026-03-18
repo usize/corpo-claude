@@ -261,41 +261,67 @@ cmd_search() {
     fi
   done
 
-  info "Searching skill registries..."
+  info "Searching registries..."
   echo ""
 
-  local all_skills
-  all_skills="$(fetch_all_skill_indexes "$refresh")"
+  local all_items
+  all_items="$(fetch_all_indexes "$refresh")"
 
   local count
-  count="$(echo "$all_skills" | jq 'length')"
+  count="$(echo "$all_items" | jq 'length')"
 
   if [[ "$count" == "0" ]]; then
-    warn "No skills found in any registry."
+    warn "No skills or profiles found in any registry."
     return 0
   fi
 
   # Filter by query if provided
   local filtered
   if [[ -n "$query" && "$query" != "--refresh" ]]; then
-    filtered="$(echo "$all_skills" | jq --arg q "$query" \
-      '[.[] | select(.name | test($q; "i")) // select(.description | test($q; "i"))]')"
+    filtered="$(echo "$all_items" | jq --arg q "$query" \
+      '[.[] | select((.name | test($q; "i")) or (.description | test($q; "i")))]')"
   else
-    filtered="$all_skills"
+    filtered="$all_items"
   fi
 
   local filtered_count
   filtered_count="$(echo "$filtered" | jq 'length')"
 
   if [[ "$filtered_count" == "0" ]]; then
-    warn "No skills matching '$query'."
+    warn "No results matching '$query'."
     return 0
   fi
 
-  gum style --bold --foreground 39 "Available Skills ($filtered_count)"
-  echo ""
+  # Display skills
+  local skills_filtered
+  skills_filtered="$(echo "$filtered" | jq '[.[] | select(.type == "skill")]')"
+  local skills_count
+  skills_count="$(echo "$skills_filtered" | jq 'length')"
 
-  echo "$filtered" | jq -r '.[] | "\(.name)\t\(.registry)\t\(.description)"' | while IFS=$'\t' read -r name registry desc; do
+  if [[ "$skills_count" != "0" ]]; then
+    gum style --bold --foreground 39 "Skills ($skills_count)"
+    echo ""
+    _display_items "$skills_filtered"
+  fi
+
+  # Display profiles
+  local profiles_filtered
+  profiles_filtered="$(echo "$filtered" | jq '[.[] | select(.type == "profile")]')"
+  local profiles_count
+  profiles_count="$(echo "$profiles_filtered" | jq 'length')"
+
+  if [[ "$profiles_count" != "0" ]]; then
+    gum style --bold --foreground 39 "Profiles ($profiles_count)"
+    echo ""
+    _display_items "$profiles_filtered"
+  fi
+}
+
+# Display a JSON array of items (skills or profiles)
+_display_items() {
+  local items_json="$1"
+
+  echo "$items_json" | jq -r '.[] | "\(.name)\t\(.registry)\t\(.description // "")"' | while IFS=$'\t' read -r name registry desc; do
     local reg_label
     if [[ "$registry" == "local" ]]; then
       reg_label="local"
