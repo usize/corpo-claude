@@ -2,7 +2,7 @@ provider:
   type: vertex
   region: global
 
-claude_md: templates/example/CLAUDE.md
+claude_md: CLAUDE.md
 
 mcp_servers:
   - name: context-mode
@@ -10,7 +10,7 @@ mcp_servers:
     package: context-mode
 
 skills:
-  - templates/example/skills/review.md
+  - skills/review.md
 
 hooks:
   PreToolUse:
@@ -18,12 +18,12 @@ hooks:
       command: "echo 'Hook: pre-tool-use check'"
 
 project_template:
-  claude_md: templates/example/project-CLAUDE.md
+  claude_md: project-CLAUDE.md
   settings:
     permissions:
       deny:
         - "Bash(rm -rf *)"
   commands:
-    - templates/example/commands/commit.md
+    - commands/commit.md
   rules:
-    - templates/example/rules/api-conventions.md
+    - rules/api-conventions.md
