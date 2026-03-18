@@ -17,12 +17,12 @@ Usage:
   corpo-claude <command> [subcommand] [options]
 
 Commands:
-  init                         Apply a profile to user scope (~/.claude/)
-  scaffold                     Generate .claude/ folder from a profile (project scope)
+  init                         Apply a profile (prompts for scope)
   preview                      Show what a profile would write (read-only)
+  scaffold                     Alias for init --project
 
   skill search [query]         Search available skills across registries
-  skill install <name>         Install a skill
+  skill install <name>         Install a skill (prompts for scope)
   skill uninstall <name>       Remove an installed skill
   skill list                   Show installed skills
 
@@ -35,7 +35,8 @@ Commands:
 
 Options:
   --profile <name>   Profile(s) to apply (can be repeated; omit for interactive picker)
-  --project          Install skill to project scope (.claude/commands/) instead of user scope
+  --global           Skip scope prompt, use user scope (~/.claude/)
+  --project          Skip scope prompt, use project scope (./.claude/)
   --refresh          Bypass cache when searching remote registries
   --help, -h         Show this help message
   --version, -v      Show version
@@ -45,11 +46,9 @@ Examples:
   corpo-claude skill install pdf
   corpo-claude skill install multi-agent-team --project
   corpo-claude skill list
-  corpo-claude skill uninstall pdf
   corpo-claude profile search
-  corpo-claude profile list
   corpo-claude init --profile usize
-  corpo-claude scaffold --profile usize
+  corpo-claude init --profile usize --global
   corpo-claude registry add myorg/claude-config
 EOF
 }

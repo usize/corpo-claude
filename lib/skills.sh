@@ -92,16 +92,40 @@ _is_installed() {
     "$INSTALLED_FILE" &>/dev/null
 }
 
+# ── Scope picker ──────────────────────────────────────────
+
+# Prompts the user to pick project or user (global) scope.
+# Skipped if --project or --global was already set.
+_pick_scope() {
+  local current_scope="$1"
+  # "unset" means no flag was given — prompt
+  if [[ "$current_scope" != "unset" ]]; then
+    echo "$current_scope"
+    return 0
+  fi
+
+  local choice
+  choice="$(gum choose --header "Install scope" \
+    "project  — .claude/commands/ (this project only)" \
+    "global   — ~/.claude/commands/ (all projects)")"
+
+  case "$choice" in
+    project*) echo "project" ;;
+    *)        echo "user" ;;
+  esac
+}
+
 # ── skill install ─────────────────────────────────────────
 
 cmd_skill_install() {
   local skill_name=""
-  local scope="user"
+  local scope="unset"
   local refresh="false"
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --project) scope="project"; shift ;;
+      --global)  scope="user"; shift ;;
       --refresh) refresh="true"; shift ;;
       -*) error "Unknown option: $1"; return 1 ;;
       *)  skill_name="$1"; shift ;;
@@ -109,9 +133,11 @@ cmd_skill_install() {
   done
 
   if [[ -z "$skill_name" ]]; then
-    error "Usage: corpo-claude skill install <name> [--project] [--refresh]"
+    error "Usage: corpo-claude skill install <name> [--project|--global] [--refresh]"
     return 1
   fi
+
+  scope="$(_pick_scope "$scope")"
 
   local target_dir
   if [[ "$scope" == "project" ]]; then

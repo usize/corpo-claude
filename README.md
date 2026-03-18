@@ -35,11 +35,11 @@ Run directly from the cloned repo:
 
 | Command | What it does |
 |---------|-------------|
-| `init --profile <name>` | Apply a profile to user scope (`~/.claude/`) |
-| `scaffold --profile <name>` | Generate `.claude/` folder from a profile (project scope) |
+| `init --profile <name>` | Apply a profile (prompts for scope) |
 | `preview --profile <name>` | Show what a profile would write (read-only) |
+| `scaffold --profile <name>` | Alias for `init --project` |
 | `skill search [query]` | Search available skills across registries |
-| `skill install <name>` | Install a skill |
+| `skill install <name>` | Install a skill (prompts for scope) |
 | `skill uninstall <name>` | Remove an installed skill |
 | `skill list` | Show installed skills |
 | `profile search [query]` | Search available profiles across registries |
@@ -48,6 +48,10 @@ Run directly from the cloned repo:
 | `registry remove <owner/repo>` | Remove a registry |
 | `registry list` | Show all registries |
 
+Both `init` and `skill install` prompt you to choose between project scope
+(`.claude/`) and global scope (`~/.claude/`). Use `--project` or `--global`
+to skip the prompt.
+
 ### Examples
 
 ```bash
@@ -55,21 +59,29 @@ Run directly from the cloned repo:
 ./corpo-claude skill search
 ./corpo-claude skill search pdf
 
-# Install / uninstall skills
+# Install a skill (will prompt for scope)
 ./corpo-claude skill install pdf
-./corpo-claude skill install multi-agent-team --project
-./corpo-claude skill uninstall pdf
 
-# List installed skills
+# Skip the prompt with --project or --global
+./corpo-claude skill install multi-agent-team --project
+./corpo-claude skill install pdf --global
+
+# List / uninstall
 ./corpo-claude skill list
+./corpo-claude skill uninstall pdf
 
 # Search for profiles
 ./corpo-claude profile search
 ./corpo-claude profile list
 
-# Apply a profile
+# Apply a profile (will prompt for scope)
 ./corpo-claude init --profile usize
-./corpo-claude scaffold --profile usize
+
+# Skip the prompt
+./corpo-claude init --profile usize --global
+./corpo-claude init --profile usize --project
+
+# Preview without applying
 ./corpo-claude preview --profile usize
 
 # Manage registries
