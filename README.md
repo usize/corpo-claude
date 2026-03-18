@@ -31,22 +31,19 @@ Run directly from the cloned repo:
 
 ## Usage
 
-### Profile Commands
-
-| Command | What it does | Scope |
-|---------|-------------|-------|
-| `init` | Set up provider, MCP servers, user CLAUDE.md, hooks, skills | User (`~/.claude/`) |
-| `scaffold` | Generate `.claude/` folder in current directory | Project (`./.claude/`) |
-| `preview` | Show what would be written without doing it | Read-only |
-
-### Skill Commands
+### Commands
 
 | Command | What it does |
 |---------|-------------|
-| `install <skill>` | Install a skill from a registry |
-| `uninstall <skill>` | Remove an installed skill |
-| `search [query]` | Search/browse available skills and profiles |
-| `list` | Show installed skills |
+| `init --profile <name>` | Apply a profile to user scope (`~/.claude/`) |
+| `scaffold --profile <name>` | Generate `.claude/` folder from a profile (project scope) |
+| `preview --profile <name>` | Show what a profile would write (read-only) |
+| `skill search [query]` | Search available skills across registries |
+| `skill install <name>` | Install a skill |
+| `skill uninstall <name>` | Remove an installed skill |
+| `skill list` | Show installed skills |
+| `profile search [query]` | Search available profiles across registries |
+| `profile list` | Show available local profiles |
 | `registry add <owner/repo>` | Add a registry |
 | `registry remove <owner/repo>` | Remove a registry |
 | `registry list` | Show all registries |
@@ -54,37 +51,29 @@ Run directly from the cloned repo:
 ### Examples
 
 ```bash
-# Browse all available skills and profiles
-./corpo-claude search
+# Search for skills
+./corpo-claude skill search
+./corpo-claude skill search pdf
 
-# Search for something specific
-./corpo-claude search pdf
-
-# Install a skill to user scope
-./corpo-claude install pdf
-
-# Install a skill to project scope
-./corpo-claude install multi-agent-team --project
+# Install / uninstall skills
+./corpo-claude skill install pdf
+./corpo-claude skill install multi-agent-team --project
+./corpo-claude skill uninstall pdf
 
 # List installed skills
-./corpo-claude list
+./corpo-claude skill list
 
-# Uninstall a skill
-./corpo-claude uninstall pdf
+# Search for profiles
+./corpo-claude profile search
+./corpo-claude profile list
 
-# Apply a profile to user scope
+# Apply a profile
 ./corpo-claude init --profile usize
-
-# Scaffold project-scope config from a profile
 ./corpo-claude scaffold --profile usize
-
-# Preview what a profile will do
 ./corpo-claude preview --profile usize
 
-# Add a custom registry
+# Manage registries
 ./corpo-claude registry add myorg/claude-config
-
-# List all registries
 ./corpo-claude registry list
 ```
 

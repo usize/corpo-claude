@@ -14,19 +14,24 @@ usage() {
 corpo-claude $CORPO_VERSION — Standardize Claude Code configuration across teams
 
 Usage:
-  corpo-claude <command> [options]
+  corpo-claude <command> [subcommand] [options]
 
-Profile Commands:
-  init        Set up provider, MCP servers, user CLAUDE.md, hooks, skills (user scope)
-  scaffold    Generate .claude/ folder in current directory (project scope)
-  preview     Show what would be written without doing it (read-only)
+Commands:
+  init                         Apply a profile to user scope (~/.claude/)
+  scaffold                     Generate .claude/ folder from a profile (project scope)
+  preview                      Show what a profile would write (read-only)
 
-Skill Commands:
-  install     Install a skill from a registry
-  uninstall   Remove an installed skill
-  search      Search/browse available skills
-  list        Show installed skills
-  registry    Manage skill registries (add/remove/list)
+  skill search [query]         Search available skills across registries
+  skill install <name>         Install a skill
+  skill uninstall <name>       Remove an installed skill
+  skill list                   Show installed skills
+
+  profile search [query]       Search available profiles across registries
+  profile list                 Show available local profiles
+
+  registry add <owner/repo>    Add a registry
+  registry remove <owner/repo> Remove a registry
+  registry list                Show all registries
 
 Options:
   --profile <name>   Profile(s) to apply (can be repeated; omit for interactive picker)
@@ -36,16 +41,16 @@ Options:
   --version, -v      Show version
 
 Examples:
-  corpo-claude init --profile backend --profile company
-  corpo-claude scaffold --profile backend
-  corpo-claude preview
-  corpo-claude search
-  corpo-claude install multi-agent-team --project
-  corpo-claude install pdf
-  corpo-claude list
-  corpo-claude uninstall pdf
-  corpo-claude registry add myorg/skills
-  corpo-claude registry list
+  corpo-claude skill search
+  corpo-claude skill install pdf
+  corpo-claude skill install multi-agent-team --project
+  corpo-claude skill list
+  corpo-claude skill uninstall pdf
+  corpo-claude profile search
+  corpo-claude profile list
+  corpo-claude init --profile usize
+  corpo-claude scaffold --profile usize
+  corpo-claude registry add myorg/claude-config
 EOF
 }
 
@@ -95,17 +100,11 @@ main() {
     preview)
       cmd_preview "$@"
       ;;
-    install)
-      cmd_install "$@"
+    skill)
+      cmd_skill "$@"
       ;;
-    uninstall)
-      cmd_uninstall "$@"
-      ;;
-    search)
-      cmd_search "$@"
-      ;;
-    list)
-      cmd_list "$@"
+    profile)
+      cmd_profile "$@"
       ;;
     registry)
       cmd_registry "$@"
