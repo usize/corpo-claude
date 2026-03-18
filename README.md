@@ -1,17 +1,19 @@
 # corpo-claude
 
-Standardize Claude Code configuration across teams. A Bash CLI that reads
-profile YAML files and writes Claude Code configuration to the correct
-scopes — no tokens, no LLM, just file operations.
+Standardize Claude Code configuration across teams and distribute skills
+like packages. A Bash CLI that reads profile YAML files, writes Claude Code
+configuration to the correct scopes, and manages a skill registry — no
+tokens, no LLM, just file operations.
 
 ## Requirements
 
 - [gum](https://github.com/charmbracelet/gum) — interactive TUI
 - [yq](https://github.com/mikefarah/yq) — YAML parsing
 - [jq](https://github.com/jqlang/jq) — JSON manipulation
+- [gh](https://cli.github.com/) — GitHub CLI (required for remote skill registries)
 
 ```bash
-brew install gum yq jq
+brew install gum yq jq gh
 ```
 
 ## Installation
@@ -30,13 +32,25 @@ Run directly from the cloned repo:
 
 ## Usage
 
-### Commands
+### Profile Commands
 
 | Command | What it does | Scope |
 |---------|-------------|-------|
 | `init` | Set up provider, MCP servers, user CLAUDE.md, hooks, skills | User (`~/.claude/`) |
 | `scaffold` | Generate `.claude/` folder in current directory | Project (`./.claude/`) |
 | `preview` | Show what would be written without doing it | Read-only |
+
+### Skill Commands
+
+| Command | What it does |
+|---------|-------------|
+| `install <skill>` | Install a skill from a registry |
+| `uninstall <skill>` | Remove an installed skill |
+| `search [query]` | Search/browse available skills |
+| `list` | Show installed skills |
+| `registry add <owner/repo>` | Add a skill registry |
+| `registry remove <owner/repo>` | Remove a skill registry |
+| `registry list` | Show all registries |
 
 ### Examples
 
@@ -55,6 +69,30 @@ Run directly from the cloned repo:
 
 # Interactive mode — omit --profile for a picker menu
 ./corpo-claude init
+
+# Browse all available skills
+./corpo-claude search
+
+# Search for a specific skill
+./corpo-claude search pdf
+
+# Install a skill to user scope
+./corpo-claude install pdf
+
+# Install a skill to project scope
+./corpo-claude install multi-agent-team --project
+
+# List installed skills
+./corpo-claude list
+
+# Uninstall a skill
+./corpo-claude uninstall pdf
+
+# Add a custom skill registry
+./corpo-claude registry add myorg/claude-skills
+
+# List all registries
+./corpo-claude registry list
 ```
 
 ## Profile YAML Reference
@@ -148,3 +186,30 @@ configured:
 - **Bedrock**: runs `aws sts get-caller-identity`
 
 These are warnings only — init will succeed even if auth isn't configured yet.
+
+## Skill Package Manager
+
+corpo-claude includes a skill package manager inspired by `brew`. Skills are
+Claude Code slash commands (directories containing a `SKILL.md` file) that
+can be installed from registries.
+
+### Registries (searched in order)
+
+1. **Local** — Bundled skills in `skills/` within the corpo-claude repo
+2. **Default remote** — `anthropics/skills` (always present, cannot be removed)
+3. **User-added remotes** — Added via `corpo-claude registry add <owner/repo>`
+
+### How it works
+
+- `search` queries all registries and shows available skills with descriptions
+- `install` copies the skill directory to `~/.claude/commands/<skill>/` (user scope)
+  or `.claude/commands/<skill>/` (project scope with `--project`)
+- Remote skills are fetched via the GitHub API using `gh`
+- Skill indexes are cached for 1 hour; use `--refresh` to bypass the cache
+- Installed state is tracked in `~/.corpo-claude/installed.json`
+
+### Bundled Skills
+
+| Skill | Description |
+|-------|-------------|
+| `multi-agent-team` | Coordinate multiple Claude agents working in parallel via git worktrees |
