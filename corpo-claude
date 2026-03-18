@@ -16,13 +16,22 @@ corpo-claude $CORPO_VERSION — Standardize Claude Code configuration across tea
 Usage:
   corpo-claude <command> [options]
 
-Commands:
+Profile Commands:
   init        Set up provider, MCP servers, user CLAUDE.md, hooks, skills (user scope)
   scaffold    Generate .claude/ folder in current directory (project scope)
   preview     Show what would be written without doing it (read-only)
 
+Skill Commands:
+  install     Install a skill from a registry
+  uninstall   Remove an installed skill
+  search      Search/browse available skills
+  list        Show installed skills
+  registry    Manage skill registries (add/remove/list)
+
 Options:
   --profile <name>   Profile(s) to apply (can be repeated; omit for interactive picker)
+  --project          Install skill to project scope (.claude/commands/) instead of user scope
+  --refresh          Bypass cache when searching remote registries
   --help, -h         Show this help message
   --version, -v      Show version
 
@@ -30,6 +39,13 @@ Examples:
   corpo-claude init --profile backend --profile company
   corpo-claude scaffold --profile backend
   corpo-claude preview
+  corpo-claude search
+  corpo-claude install multi-agent-team --project
+  corpo-claude install pdf
+  corpo-claude list
+  corpo-claude uninstall pdf
+  corpo-claude registry add myorg/skills
+  corpo-claude registry list
 EOF
 }
 
@@ -62,6 +78,8 @@ main() {
   source "$SCRIPT_DIR/lib/preview.sh"
   source "$SCRIPT_DIR/lib/init.sh"
   source "$SCRIPT_DIR/lib/scaffold.sh"
+  source "$SCRIPT_DIR/lib/registry.sh"
+  source "$SCRIPT_DIR/lib/skills.sh"
 
   # Route subcommands
   local cmd="$1"
@@ -76,6 +94,21 @@ main() {
       ;;
     preview)
       cmd_preview "$@"
+      ;;
+    install)
+      cmd_install "$@"
+      ;;
+    uninstall)
+      cmd_uninstall "$@"
+      ;;
+    search)
+      cmd_search "$@"
+      ;;
+    list)
+      cmd_list "$@"
+      ;;
+    registry)
+      cmd_registry "$@"
       ;;
     *)
       error "Unknown command: $cmd"
