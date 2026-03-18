@@ -1,16 +1,15 @@
 # corpo-claude
 
-Standardize Claude Code configuration across teams and distribute skills
-like packages. A Bash CLI that reads profile YAML files, writes Claude Code
-configuration to the correct scopes, and manages a skill registry — no
-tokens, no LLM, just file operations.
+Standardize Claude Code configuration across teams. A Bash CLI that
+distributes skills and profiles through a unified registry model — like
+`brew` for Claude Code configuration.
 
 ## Requirements
 
 - [gum](https://github.com/charmbracelet/gum) — interactive TUI
 - [yq](https://github.com/mikefarah/yq) — YAML parsing
 - [jq](https://github.com/jqlang/jq) — JSON manipulation
-- [gh](https://cli.github.com/) — GitHub CLI (required for remote skill registries)
+- [gh](https://cli.github.com/) — GitHub CLI (required for remote registries)
 
 ```bash
 brew install gum yq jq gh
@@ -46,34 +45,19 @@ Run directly from the cloned repo:
 |---------|-------------|
 | `install <skill>` | Install a skill from a registry |
 | `uninstall <skill>` | Remove an installed skill |
-| `search [query]` | Search/browse available skills |
+| `search [query]` | Search/browse available skills and profiles |
 | `list` | Show installed skills |
-| `registry add <owner/repo>` | Add a skill registry |
-| `registry remove <owner/repo>` | Remove a skill registry |
+| `registry add <owner/repo>` | Add a registry |
+| `registry remove <owner/repo>` | Remove a registry |
 | `registry list` | Show all registries |
 
 ### Examples
 
 ```bash
-# Preview what a profile will do
-./corpo-claude preview --profile backend
-
-# Apply a profile to user scope
-./corpo-claude init --profile backend
-
-# Apply multiple profiles (arrays accumulate, scalars last-wins)
-./corpo-claude init --profile company --profile backend
-
-# Scaffold project-scope config
-./corpo-claude scaffold --profile backend
-
-# Interactive mode — omit --profile for a picker menu
-./corpo-claude init
-
-# Browse all available skills
+# Browse all available skills and profiles
 ./corpo-claude search
 
-# Search for a specific skill
+# Search for something specific
 ./corpo-claude search pdf
 
 # Install a skill to user scope
@@ -88,26 +72,79 @@ Run directly from the cloned repo:
 # Uninstall a skill
 ./corpo-claude uninstall pdf
 
-# Add a custom skill registry
-./corpo-claude registry add myorg/claude-skills
+# Apply a profile to user scope
+./corpo-claude init --profile usize
+
+# Scaffold project-scope config from a profile
+./corpo-claude scaffold --profile usize
+
+# Preview what a profile will do
+./corpo-claude preview --profile usize
+
+# Add a custom registry
+./corpo-claude registry add myorg/claude-config
 
 # List all registries
 ./corpo-claude registry list
 ```
 
-## Profile YAML Reference
+## Registry Model
 
-Profiles live in `profiles/` as `.yaml` files. Each profile can configure
-any combination of the sections below.
+corpo-claude itself is a registry. Any GitHub repo with `skills/` and/or
+`profiles/` at the root follows the same structure and can be used as a
+registry.
+
+### Registry structure
+
+```
+my-registry/
+  skills/
+    my-skill/
+      SKILL.md              # skill manifest (Claude Code slash command)
+  profiles/
+    my-team/
+      profile.yaml          # profile manifest
+      CLAUDE.md             # referenced files travel with the profile
+      commands/
+        commit.md
+      rules/
+        conventions.md
+```
+
+### Registry tiers (searched in order)
+
+1. **Local** — The corpo-claude repo itself (`skills/` and `profiles/`)
+2. **Default remote** — `anthropics/skills` (always present, cannot be removed)
+3. **User-added remotes** — Added via `corpo-claude registry add <owner/repo>`
+
+### How it works
+
+- `search` queries all registries and shows available skills and profiles
+- `install` copies a skill directory to `~/.claude/commands/<skill>/` (user)
+  or `.claude/commands/<skill>/` (project with `--project`)
+- `init`/`scaffold` apply profiles — local profiles work directly, remote
+  profiles are downloaded on the fly
+- Remote content is fetched via the GitHub API using `gh`
+- Indexes are cached for 1 hour; use `--refresh` to bypass the cache
+- Installed state is tracked in `~/.corpo-claude/installed.json`
+
+## Profile Reference
+
+Profiles are self-contained directories: `profiles/<name>/profile.yaml`
+plus any files it references. All file paths in `profile.yaml` are relative
+to the profile directory, making profiles portable across registries.
 
 ```yaml
+# Optional description shown in search results
+description: My team's Claude Code configuration
+
 # Provider — configures Claude Code to use Vertex AI or Bedrock
 provider:
   type: vertex              # vertex | bedrock
   region: global            # GCP region or AWS region
 
-# User-scope CLAUDE.md — copied to ~/.claude/CLAUDE.md
-claude_md: templates/company/CLAUDE.md
+# User-scope CLAUDE.md — relative to profile directory
+claude_md: CLAUDE.md
 
 # MCP servers — installed via `claude mcp add`
 mcp_servers:
@@ -115,9 +152,9 @@ mcp_servers:
     type: npx               # npx | uvx
     package: context-mode
 
-# Skills — copied to ~/.claude/commands/
+# Skills — relative to profile directory
 skills:
-  - templates/skills/review.md
+  - skills/review.md
 
 # Hooks — written to ~/.claude/settings.json
 hooks:
@@ -127,15 +164,15 @@ hooks:
 
 # Project template — used by `scaffold` command
 project_template:
-  claude_md: templates/backend/project-CLAUDE.md
+  claude_md: project-CLAUDE.md
   settings:
     permissions:
       deny:
         - "Bash(rm -rf *)"
   commands:
-    - templates/commands/commit.md
+    - commands/commit.md
   rules:
-    - templates/rules/api-conventions.md
+    - rules/api-conventions.md
 ```
 
 ### Multiple Profiles
@@ -144,9 +181,25 @@ When multiple profiles are applied, they are merged:
 - **Arrays** (mcp_servers, skills, hooks, commands, rules) are accumulated
 - **Scalars** (provider type, region, claude_md) use last-wins
 
+File paths from each profile are resolved to absolute paths before merging,
+so profiles from different registries can be combined.
+
 ```bash
 ./corpo-claude init --profile company --profile team-backend
 ```
+
+## Creating a Registry
+
+Any GitHub repo can be a corpo-claude registry. Just follow the structure:
+
+1. Create `skills/<name>/SKILL.md` for skills
+2. Create `profiles/<name>/profile.yaml` for profiles
+3. Include any files referenced by profiles inside their directory
+4. Push to GitHub
+5. Users add it with `corpo-claude registry add <owner>/<repo>`
+
+The corpo-claude repo itself is an example — it bundles the
+`multi-agent-team` skill and the `usize` profile.
 
 ## What Gets Written Where
 
@@ -169,14 +222,6 @@ When multiple profiles are applied, they are merged:
 | `project_template.commands` | `./.claude/commands/` |
 | `project_template.rules` | `./.claude/rules/` |
 
-## Creating Profiles
-
-1. Create a YAML file in `profiles/`, e.g. `profiles/my-team.yaml`
-2. Add the sections you need (all are optional)
-3. Add any referenced templates/files to `templates/`
-4. Test with `./corpo-claude preview --profile my-team`
-5. Apply with `./corpo-claude init --profile my-team`
-
 ## Auth Validation
 
 After `init`, corpo-claude checks if cloud provider credentials are
@@ -186,30 +231,3 @@ configured:
 - **Bedrock**: runs `aws sts get-caller-identity`
 
 These are warnings only — init will succeed even if auth isn't configured yet.
-
-## Skill Package Manager
-
-corpo-claude includes a skill package manager inspired by `brew`. Skills are
-Claude Code slash commands (directories containing a `SKILL.md` file) that
-can be installed from registries.
-
-### Registries (searched in order)
-
-1. **Local** — Bundled skills in `skills/` within the corpo-claude repo
-2. **Default remote** — `anthropics/skills` (always present, cannot be removed)
-3. **User-added remotes** — Added via `corpo-claude registry add <owner/repo>`
-
-### How it works
-
-- `search` queries all registries and shows available skills with descriptions
-- `install` copies the skill directory to `~/.claude/commands/<skill>/` (user scope)
-  or `.claude/commands/<skill>/` (project scope with `--project`)
-- Remote skills are fetched via the GitHub API using `gh`
-- Skill indexes are cached for 1 hour; use `--refresh` to bypass the cache
-- Installed state is tracked in `~/.corpo-claude/installed.json`
-
-### Bundled Skills
-
-| Skill | Description |
-|-------|-------------|
-| `multi-agent-team` | Coordinate multiple Claude agents working in parallel via git worktrees |
