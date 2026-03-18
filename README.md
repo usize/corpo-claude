@@ -1,5 +1,7 @@
 # corpo-claude
 
+![corpo-claude-logo](./corpo-claude.png)
+
 Standardize Claude Code configuration across teams. A Bash CLI that
 distributes skills and profiles through a unified registry model — like
 `brew` for Claude Code configuration.
