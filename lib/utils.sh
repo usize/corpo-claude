@@ -5,7 +5,10 @@
 CORPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # Version
-CORPO_VERSION="0.1.0"
+CORPO_VERSION="0.2.0"
+
+# Data directory for corpo-claude state (registries, installed skills, cache)
+CORPO_DATA_DIR="${CORPO_DATA_DIR:-$HOME/.corpo-claude}"
 
 # ── Styled output ──────────────────────────────────────────────
 # All output helpers fall back to plain text if gum is not installed,
@@ -87,6 +90,22 @@ check_all_dependencies() {
     error "Please install missing dependencies and try again."
     exit 1
   fi
+}
+
+# ── Data directory ─────────────────────────────────────────
+
+ensure_data_dir() {
+  mkdir -p "$CORPO_DATA_DIR"
+  mkdir -p "$CORPO_DATA_DIR/cache"
+}
+
+# ── Skills dependency check ───────────────────────────────
+
+# Checks for gh CLI, required by skill install/search from remote registries.
+# Returns 0 if gh is available, 1 otherwise.
+check_skills_dependencies() {
+  check_dependency "gh" "brew install gh  (https://cli.github.com/)" || return 1
+  return 0
 }
 
 # ── Path helpers ───────────────────────────────────────────────
