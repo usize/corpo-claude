@@ -181,16 +181,14 @@ _init_provider() {
 
 _init_claude_md() {
   local src="$1"
-  local resolved
-  resolved="$(resolve_path "$src")"
 
-  if [[ ! -f "$resolved" ]]; then
-    error "CLAUDE.md source not found: $resolved"
+  if [[ ! -f "$src" ]]; then
+    error "CLAUDE.md source not found: $src"
     return 1
   fi
 
   mkdir -p "$CLAUDE_HOME"
-  cp "$resolved" "$CLAUDE_HOME/CLAUDE.md"
+  cp "$src" "$CLAUDE_HOME/CLAUDE.md"
   success "CLAUDE.md copied to $CLAUDE_HOME/CLAUDE.md"
 }
 
@@ -261,16 +259,15 @@ _init_skills() {
 
   local k=0
   while [[ $k -lt $count ]]; do
-    local skill resolved
+    local skill
     skill="$(profile_get "$merged_file" ".skills[$k]")"
-    resolved="$(resolve_path "$skill")"
 
-    if [[ ! -f "$resolved" ]]; then
-      warn "Skill file not found: $resolved"
+    if [[ ! -f "$skill" ]]; then
+      warn "Skill file not found: $skill"
     else
       local filename
-      filename="$(basename "$resolved")"
-      cp "$resolved" "$commands_dir/$filename"
+      filename="$(basename "$skill")"
+      cp "$skill" "$commands_dir/$filename"
       success "Skill copied: $filename → $commands_dir/"
     fi
     k=$((k + 1))

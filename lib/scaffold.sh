@@ -93,12 +93,10 @@ cmd_scaffold() {
 
   # CLAUDE.md
   if [[ -n "$pt_claude_md" ]]; then
-    local resolved
-    resolved="$(resolve_path "$pt_claude_md")"
-    if [[ ! -f "$resolved" ]]; then
-      error "Project CLAUDE.md source not found: $resolved"
+    if [[ ! -f "$pt_claude_md" ]]; then
+      error "Project CLAUDE.md source not found: $pt_claude_md"
     else
-      cp "$resolved" "$project_claude_dir/CLAUDE.md"
+      cp "$pt_claude_md" "$project_claude_dir/CLAUDE.md"
       success "CLAUDE.md → $project_claude_dir/CLAUDE.md"
     fi
   fi
@@ -125,14 +123,13 @@ cmd_scaffold() {
     mkdir -p "$project_claude_dir/commands"
     local m=0
     while [[ $m -lt $cmd_count ]]; do
-      local tcmd resolved filename
+      local tcmd filename
       tcmd="$(profile_get "$merged_file" ".project_template.commands[$m]")"
-      resolved="$(resolve_path "$tcmd")"
-      if [[ ! -f "$resolved" ]]; then
-        warn "Command file not found: $resolved"
+      if [[ ! -f "$tcmd" ]]; then
+        warn "Command file not found: $tcmd"
       else
-        filename="$(basename "$resolved")"
-        cp "$resolved" "$project_claude_dir/commands/$filename"
+        filename="$(basename "$tcmd")"
+        cp "$tcmd" "$project_claude_dir/commands/$filename"
         success "Command: $filename → $project_claude_dir/commands/"
       fi
       m=$((m + 1))
@@ -144,14 +141,13 @@ cmd_scaffold() {
     mkdir -p "$project_claude_dir/rules"
     local n=0
     while [[ $n -lt $rule_count ]]; do
-      local rule resolved filename
+      local rule filename
       rule="$(profile_get "$merged_file" ".project_template.rules[$n]")"
-      resolved="$(resolve_path "$rule")"
-      if [[ ! -f "$resolved" ]]; then
-        warn "Rule file not found: $resolved"
+      if [[ ! -f "$rule" ]]; then
+        warn "Rule file not found: $rule"
       else
-        filename="$(basename "$resolved")"
-        cp "$resolved" "$project_claude_dir/rules/$filename"
+        filename="$(basename "$rule")"
+        cp "$rule" "$project_claude_dir/rules/$filename"
         success "Rule: $filename → $project_claude_dir/rules/"
       fi
       n=$((n + 1))
