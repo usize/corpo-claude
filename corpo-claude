@@ -14,20 +14,18 @@ usage() {
 corpo-claude $CORPO_VERSION — Standardize Claude Code configuration across teams
 
 Usage:
-  corpo-claude <command> [subcommand] [options]
+  corpo-claude <command> <subcommand> [options]
 
 Commands:
-  init                         Apply a profile (prompts for scope)
-  preview                      Show what a profile would write (read-only)
-  scaffold                     Alias for init --project
-
   skill search [query]         Search available skills across registries
   skill install <name>         Install a skill (prompts for scope)
   skill uninstall <name>       Remove an installed skill
   skill list                   Show installed skills
 
   profile search [query]       Search available profiles across registries
+  profile install [--profile]  Apply a profile (prompts for scope)
   profile list                 Show available local profiles
+  profile preview              Show what a profile would write (read-only)
 
   registry add <owner/repo>    Add a registry
   registry remove <owner/repo> Remove a registry
@@ -47,8 +45,9 @@ Examples:
   corpo-claude skill install multi-agent-team --project
   corpo-claude skill list
   corpo-claude profile search
-  corpo-claude init --profile usize
-  corpo-claude init --profile usize --global
+  corpo-claude profile install --profile usize
+  corpo-claude profile install --profile usize --global
+  corpo-claude profile preview --profile usize
   corpo-claude registry add myorg/claude-config
 EOF
 }
@@ -56,13 +55,11 @@ EOF
 # ── Main ───────────────────────────────────────────────────────
 
 main() {
-  # Handle no arguments
   if [[ $# -eq 0 ]]; then
     usage
     exit 0
   fi
 
-  # Handle top-level flags before dependency check
   case "${1:-}" in
     --help|-h)
       usage
@@ -74,31 +71,18 @@ main() {
       ;;
   esac
 
-  # Check dependencies
   check_all_dependencies
 
-  # Source remaining library files
   source "$SCRIPT_DIR/lib/profiles.sh"
   source "$SCRIPT_DIR/lib/preview.sh"
   source "$SCRIPT_DIR/lib/init.sh"
-  source "$SCRIPT_DIR/lib/scaffold.sh"
   source "$SCRIPT_DIR/lib/registry.sh"
   source "$SCRIPT_DIR/lib/skills.sh"
 
-  # Route subcommands
   local cmd="$1"
   shift
 
   case "$cmd" in
-    init)
-      cmd_init "$@"
-      ;;
-    scaffold)
-      cmd_scaffold "$@"
-      ;;
-    preview)
-      cmd_preview "$@"
-      ;;
     skill)
       cmd_skill "$@"
       ;;

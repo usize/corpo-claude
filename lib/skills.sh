@@ -30,7 +30,7 @@ cmd_skill() {
 
 cmd_profile() {
   if [[ $# -eq 0 ]]; then
-    echo "Usage: corpo-claude profile <search|list> [args]"
+    echo "Usage: corpo-claude profile <search|install|list|preview> [args]"
     return 1
   fi
 
@@ -38,11 +38,13 @@ cmd_profile() {
   shift
 
   case "$subcmd" in
-    search) cmd_profile_search "$@" ;;
-    list)   cmd_profile_list "$@" ;;
+    search)  cmd_profile_search "$@" ;;
+    install) cmd_init "$@" ;;
+    list)    cmd_profile_list "$@" ;;
+    preview) cmd_preview "$@" ;;
     *)
       error "Unknown profile subcommand: $subcmd"
-      echo "Usage: corpo-claude profile <search|list> [args]"
+      echo "Usage: corpo-claude profile <search|install|list|preview> [args]"
       return 1
       ;;
   esac

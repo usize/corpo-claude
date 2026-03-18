@@ -35,22 +35,21 @@ Run directly from the cloned repo:
 
 | Command | What it does |
 |---------|-------------|
-| `init --profile <name>` | Apply a profile (prompts for scope) |
-| `preview --profile <name>` | Show what a profile would write (read-only) |
-| `scaffold --profile <name>` | Alias for `init --project` |
 | `skill search [query]` | Search available skills across registries |
 | `skill install <name>` | Install a skill (prompts for scope) |
 | `skill uninstall <name>` | Remove an installed skill |
 | `skill list` | Show installed skills |
 | `profile search [query]` | Search available profiles across registries |
+| `profile install` | Apply a profile (prompts for scope) |
 | `profile list` | Show available local profiles |
+| `profile preview` | Show what a profile would write (read-only) |
 | `registry add <owner/repo>` | Add a registry |
 | `registry remove <owner/repo>` | Remove a registry |
 | `registry list` | Show all registries |
 
-Both `init` and `skill install` prompt you to choose between project scope
-(`.claude/`) and global scope (`~/.claude/`). Use `--project` or `--global`
-to skip the prompt.
+Both `skill install` and `profile install` prompt you to choose between
+project scope (`.claude/`) and global scope (`~/.claude/`). Use `--project`
+or `--global` to skip the prompt.
 
 ### Examples
 
@@ -75,14 +74,14 @@ to skip the prompt.
 ./corpo-claude profile list
 
 # Apply a profile (will prompt for scope)
-./corpo-claude init --profile usize
+./corpo-claude profile install --profile usize
 
 # Skip the prompt
-./corpo-claude init --profile usize --global
-./corpo-claude init --profile usize --project
+./corpo-claude profile install --profile usize --global
+./corpo-claude profile install --profile usize --project
 
 # Preview without applying
-./corpo-claude preview --profile usize
+./corpo-claude profile preview --profile usize
 
 # Manage registries
 ./corpo-claude registry add myorg/claude-config
