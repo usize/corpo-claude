@@ -57,6 +57,10 @@ cmd_fork() {
       shift
       cmd_fork_attach "$@"
       ;;
+    review)
+      shift
+      cmd_fork_review "$@"
+      ;;
     clean)
       shift
       cmd_fork_clean "$@"
@@ -91,6 +95,7 @@ Usage:
   corpo-claude fork [task.md]        Fork one task or all in .tasks/
   corpo-claude fork status           Show running/completed forks
   corpo-claude fork attach <name>    Attach to a running sandbox
+  corpo-claude fork review [name]    Review and merge/reject completed forks
   corpo-claude fork clean            Remove finished worktrees
 
 Examples:
@@ -98,6 +103,8 @@ Examples:
   corpo-claude fork .tasks/refactor-auth.md      # Fork a single task
   corpo-claude fork status
   corpo-claude fork attach refactor-auth
+  corpo-claude fork review                          # Review all completed forks
+  corpo-claude fork review refactor-auth            # Review a single fork
   corpo-claude fork clean
 EOF
 }
@@ -453,6 +460,313 @@ cmd_fork_attach() {
 
   info "Attaching to $container_name..."
   exec docker attach "$container_name"
+}
+
+# ── fork review ──────────────────────────────────────────────
+
+cmd_fork_review() {
+  if ! git rev-parse --is-inside-work-tree &>/dev/null; then
+    error "Not inside a git repository."
+    return 1
+  fi
+
+  local repo_root
+  repo_root="$(git rev-parse --show-toplevel)"
+  local worktrees_dir="$repo_root/.worktrees"
+  local current_branch
+  current_branch="$(git rev-parse --abbrev-ref HEAD)"
+
+  local target_name="${1:-}"
+
+  # ── Single fork by name ──────────────────────────────────
+  if [[ -n "$target_name" ]]; then
+    local wt_dir="$worktrees_dir/$target_name"
+    if [[ ! -d "$wt_dir" ]]; then
+      error "Worktree not found: $target_name"
+      echo ""
+      info "Available worktrees:"
+      if [[ -d "$worktrees_dir" ]]; then
+        for d in "$worktrees_dir"/*/; do
+          [[ -d "$d" ]] && info "  $(basename "$d")"
+        done
+      else
+        info "  (none)"
+      fi
+      return 1
+    fi
+
+    REVIEW_RESULT=""
+    _review_single_fork "$repo_root" "$target_name" "$current_branch"
+    return 0
+  fi
+
+  # ── Review all completed forks ───────────────────────────
+  if [[ ! -d "$worktrees_dir" ]]; then
+    info "No .worktrees/ directory found. Nothing to review."
+    return 0
+  fi
+
+  local has_forks=false
+  for d in "$worktrees_dir"/*/; do
+    [[ -d "$d" ]] && has_forks=true && break
+  done
+
+  if [[ "$has_forks" == false ]]; then
+    info "No forks to review."
+    return 0
+  fi
+
+  header "corpo-claude fork review"
+  echo ""
+
+  local count_accept=0 count_pr=0 count_reject=0 count_skip=0
+
+  for wt_dir in "$worktrees_dir"/*/; do
+    [[ -d "$wt_dir" ]] || continue
+
+    local task_name
+    task_name="$(basename "$wt_dir")"
+    local container_name="fork-$task_name"
+
+    # Skip running containers
+    local container_state
+    container_state="$(_container_status "$container_name")"
+    if [[ "$container_state" == "running" ]]; then
+      warn "Skipping $task_name — container is still running"
+      echo ""
+      continue
+    fi
+
+    REVIEW_RESULT=""
+    _review_single_fork "$repo_root" "$task_name" "$current_branch"
+
+    case "$REVIEW_RESULT" in
+      accept) count_accept=$((count_accept + 1)) ;;
+      pr)     count_pr=$((count_pr + 1)) ;;
+      reject) count_reject=$((count_reject + 1)) ;;
+      skip)   count_skip=$((count_skip + 1)) ;;
+    esac
+  done
+
+  echo ""
+  success "Review complete: $count_accept accepted, $count_pr PR, $count_reject rejected, $count_skip skipped"
+}
+
+_review_single_fork() {
+  local repo_root="$1"
+  local task_name="$2"
+  local current_branch="$3"
+
+  local branch_name="fork/$task_name"
+  local worktree_dir="$repo_root/.worktrees/$task_name"
+
+  # ── Header ───────────────────────────────────────────────
+  gum style --bold --border rounded --padding "0 2" --border-foreground 39 "Reviewing: $task_name"
+  info "Branch: $branch_name"
+
+  # ── Verify branch exists ─────────────────────────────────
+  if ! git rev-parse --verify "$branch_name" &>/dev/null; then
+    warn "Branch $branch_name does not exist — skipping"
+    REVIEW_RESULT="skip"
+    echo ""
+    return 0
+  fi
+
+  # ── Auto-commit uncommitted work ─────────────────────────
+  _auto_commit_worktree "$worktree_dir" "$task_name"
+
+  # ── Show summary ─────────────────────────────────────────
+  _show_fork_summary "$branch_name" "$current_branch"
+
+  # ── Offer diff view ──────────────────────────────────────
+  if gum confirm "View diff?"; then
+    _show_fork_diff "$branch_name" "$current_branch"
+  fi
+
+  # ── Choose action ────────────────────────────────────────
+  local action
+  action=$(gum choose --header "Action for \"$task_name\":" \
+    "Accept (merge into $(git rev-parse --abbrev-ref HEAD))" \
+    "PR (push branch and open pull request)" \
+    "Reject (delete branch and worktree)" \
+    "Skip (decide later)")
+
+  case "$action" in
+    Accept*)
+      _accept_fork "$repo_root" "$task_name" "$branch_name" "$current_branch"
+      REVIEW_RESULT="accept"
+      ;;
+    PR*)
+      _pr_fork "$repo_root" "$task_name" "$branch_name"
+      REVIEW_RESULT="pr"
+      ;;
+    Reject*)
+      if gum confirm "Delete branch, worktree, and container for $task_name?"; then
+        _reject_fork "$repo_root" "$task_name" "$branch_name"
+        REVIEW_RESULT="reject"
+      else
+        info "Skipped"
+        REVIEW_RESULT="skip"
+      fi
+      ;;
+    Skip*)
+      info "Skipped — fork remains for later review"
+      REVIEW_RESULT="skip"
+      ;;
+  esac
+
+  echo ""
+}
+
+_auto_commit_worktree() {
+  local worktree_dir="$1"
+  local task_name="$2"
+
+  # Remove TASK.md (runtime artifact, not deliverable)
+  rm -f "$worktree_dir/TASK.md"
+
+  # Check for uncommitted changes
+  local status_output
+  status_output="$(git -C "$worktree_dir" status --porcelain 2>/dev/null || true)"
+
+  if [[ -z "$status_output" ]]; then
+    return 0
+  fi
+
+  info "Auto-committing uncommitted agent work..."
+  git -C "$worktree_dir" add -A
+  git -C "$worktree_dir" commit -m "fork($task_name): agent work" --no-verify --quiet
+  local stat
+  stat="$(git -C "$worktree_dir" diff --stat HEAD~1 2>/dev/null || true)"
+  success "Committed: $stat"
+}
+
+_show_fork_summary() {
+  local branch_name="$1"
+  local current_branch="$2"
+
+  local commit_count
+  commit_count="$(git rev-list "$current_branch".."$branch_name" --count 2>/dev/null || echo 0)"
+
+  echo ""
+  if [[ "$commit_count" -eq 0 ]]; then
+    info "No new commits on $branch_name"
+  else
+    info "$commit_count commit(s) ahead of $current_branch"
+  fi
+
+  local diffstat
+  diffstat="$(git diff --stat "$current_branch"..."$branch_name" 2>/dev/null || true)"
+  if [[ -n "$diffstat" ]]; then
+    echo "$diffstat"
+  else
+    info "No file changes"
+  fi
+  echo ""
+}
+
+_show_fork_diff() {
+  local branch_name="$1"
+  local current_branch="$2"
+
+  git diff "$current_branch"..."$branch_name" | gum pager --soft-wrap
+}
+
+_accept_fork() {
+  local repo_root="$1"
+  local task_name="$2"
+  local branch_name="$3"
+  local current_branch="$4"
+
+  info "Merging $branch_name into $current_branch..."
+
+  if ! git merge --no-ff "$branch_name" -m "Merge $branch_name" 2>/dev/null; then
+    error "Merge conflict! Resolve manually, then run:"
+    gum style --foreground 250 "  git merge --continue"
+    gum style --foreground 250 "  corpo-claude fork clean"
+    warn "Leaving branch and worktree intact for conflict resolution."
+    return 1
+  fi
+
+  success "Merged $branch_name"
+  _cleanup_fork "$repo_root" "$task_name" "$branch_name"
+}
+
+_pr_fork() {
+  local repo_root="$1"
+  local task_name="$2"
+  local branch_name="$3"
+
+  # Check for gh CLI
+  if ! command -v gh &>/dev/null; then
+    error "gh CLI is required for PR creation."
+    gum style --foreground 250 "  Install: brew install gh  (https://cli.github.com/)"
+    info "Skipping — fork remains for later review"
+    REVIEW_RESULT="skip"
+    return 0
+  fi
+
+  # Check for remote
+  if ! git remote get-url origin &>/dev/null; then
+    error "No git remote 'origin' found. Cannot push branch."
+    info "Consider using Accept to merge locally instead."
+    REVIEW_RESULT="skip"
+    return 0
+  fi
+
+  info "Pushing $branch_name to origin..."
+  git push -u origin "$branch_name"
+
+  info "Creating pull request..."
+  local pr_url
+  pr_url=$(gh pr create \
+    --title "fork: $task_name" \
+    --body "Automated agent work from \`corpo-claude fork\`." \
+    --head "$branch_name" 2>&1) || {
+    error "Failed to create PR: $pr_url"
+    REVIEW_RESULT="skip"
+    return 0
+  }
+
+  success "PR created: $pr_url"
+
+  # Clean up worktree and container only (keep branch since it's remote-tracked)
+  local container_name="fork-$task_name"
+  if _container_exists "$container_name"; then
+    docker rm -f "$container_name" &>/dev/null || true
+  fi
+  git worktree remove "$repo_root/.worktrees/$task_name" --force 2>/dev/null || true
+}
+
+_reject_fork() {
+  local repo_root="$1"
+  local task_name="$2"
+  local branch_name="$3"
+
+  _cleanup_fork "$repo_root" "$task_name" "$branch_name"
+  success "Rejected and cleaned up: $task_name"
+}
+
+_cleanup_fork() {
+  local repo_root="$1"
+  local task_name="$2"
+  local branch_name="$3"
+
+  local container_name="fork-$task_name"
+
+  # Remove container if it exists
+  if _container_exists "$container_name"; then
+    docker rm -f "$container_name" &>/dev/null || true
+  fi
+
+  # Remove worktree
+  git worktree remove "$repo_root/.worktrees/$task_name" --force 2>/dev/null || true
+
+  # Delete branch
+  git branch -D "$branch_name" &>/dev/null || true
+
+  # Remove task completion marker
+  rm -f "$repo_root/.tasks/$task_name.md.complete"
 }
 
 # ── fork clean ───────────────────────────────────────────────

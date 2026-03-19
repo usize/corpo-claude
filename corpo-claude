@@ -30,6 +30,7 @@ Commands:
   fork [task.md]               Fork tasks into parallel sandboxed agents (Docker Desktop 4.50+)
   fork status                  Show running/completed forks
   fork attach <name>           Attach to a running sandbox
+  fork review [name]           Review and merge/reject completed forks
   fork clean                   Remove finished worktrees
 
   registry add <owner/repo>    Add a registry
@@ -56,6 +57,7 @@ Examples:
   corpo-claude fork .tasks/refactor-auth.md
   corpo-claude fork status
   corpo-claude fork attach refactor-auth
+  corpo-claude fork review
   corpo-claude fork clean
   corpo-claude registry add myorg/claude-config
 EOF

@@ -65,6 +65,9 @@ corpo-claude fork status
 # Attach to a running sandbox
 corpo-claude fork attach <name>
 
+# Review completed forks — merge, PR, reject, or skip
+corpo-claude fork review [name]
+
 # Clean up finished worktrees (prompts to delete branches)
 corpo-claude fork clean
 ```

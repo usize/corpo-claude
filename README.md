@@ -49,6 +49,7 @@ Run directly from the cloned repo:
 | `fork [task.md]` | Fork tasks into parallel sandboxed agents |
 | `fork status` | Show running/completed forks |
 | `fork attach <name>` | Attach to a running sandbox |
+| `fork review [name]` | Review and merge/reject completed forks |
 | `fork clean` | Remove finished worktrees |
 | `registry add <owner/repo>` | Add a registry |
 | `registry remove <owner/repo>` | Remove a registry |
@@ -272,6 +273,10 @@ corpo-claude fork status
 
 # Attach to a running sandbox (manage terminal layout with tmux)
 corpo-claude fork attach refactor-auth
+
+# Review completed forks — merge, PR, reject, or skip
+corpo-claude fork review
+corpo-claude fork review refactor-auth
 
 # Clean up finished worktrees (prompts to delete branches)
 corpo-claude fork clean
