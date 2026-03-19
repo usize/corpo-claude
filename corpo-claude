@@ -27,6 +27,11 @@ Commands:
   profile list                 Show available local profiles
   profile preview              Show what a profile would write (read-only)
 
+  fork [task.md]               Fork tasks into parallel sandboxed agents (Docker Desktop 4.50+)
+  fork status                  Show running/completed forks
+  fork attach <name>           Attach to a running sandbox
+  fork clean                   Remove finished worktrees
+
   registry add <owner/repo>    Add a registry
   registry remove <owner/repo> Remove a registry
   registry list                Show all registries
@@ -48,6 +53,10 @@ Examples:
   corpo-claude profile install --profile usize
   corpo-claude profile install --profile usize --global
   corpo-claude profile preview --profile usize
+  corpo-claude fork .tasks/refactor-auth.md
+  corpo-claude fork status
+  corpo-claude fork attach refactor-auth
+  corpo-claude fork clean
   corpo-claude registry add myorg/claude-config
 EOF
 }
@@ -78,6 +87,7 @@ main() {
   source "$SCRIPT_DIR/lib/init.sh"
   source "$SCRIPT_DIR/lib/registry.sh"
   source "$SCRIPT_DIR/lib/skills.sh"
+  source "$SCRIPT_DIR/lib/fork.sh"
 
   local cmd="$1"
   shift
@@ -88,6 +98,9 @@ main() {
       ;;
     profile)
       cmd_profile "$@"
+      ;;
+    fork)
+      cmd_fork "$@"
       ;;
     registry)
       cmd_registry "$@"

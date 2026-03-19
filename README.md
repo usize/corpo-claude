@@ -12,6 +12,7 @@ distributes skills and profiles through a unified registry model — like
 - [yq](https://github.com/mikefarah/yq) — YAML parsing
 - [jq](https://github.com/jqlang/jq) — JSON manipulation
 - [gh](https://cli.github.com/) — GitHub CLI (required for remote registries)
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) 4.50+ — (required for `fork` command only)
 
 ```bash
 brew install gum yq jq gh
@@ -45,6 +46,10 @@ Run directly from the cloned repo:
 | `profile install` | Apply a profile (prompts for scope) |
 | `profile list` | Show available local profiles |
 | `profile preview` | Show what a profile would write (read-only) |
+| `fork [task.md]` | Fork tasks into parallel sandboxed agents |
+| `fork status` | Show running/completed forks |
+| `fork attach <name>` | Attach to a running sandbox |
+| `fork clean` | Remove finished worktrees |
 | `registry add <owner/repo>` | Add a registry |
 | `registry remove <owner/repo>` | Remove a registry |
 | `registry list` | Show all registries |
@@ -84,6 +89,13 @@ or `--global` to skip the prompt.
 
 # Preview without applying
 ./corpo-claude profile preview --profile usize
+
+# Fork tasks into parallel sandboxed agents
+./corpo-claude fork                                       # All tasks in .tasks/
+./corpo-claude fork .tasks/refactor-auth.md
+./corpo-claude fork status
+./corpo-claude fork attach refactor-auth
+./corpo-claude fork clean
 
 # Manage registries
 ./corpo-claude registry add myorg/claude-config
@@ -223,6 +235,63 @@ The corpo-claude repo itself is an example — it bundles the
 | `project_template.settings` | `./.claude/settings.json` |
 | `project_template.commands` | `./.claude/commands/` |
 | `project_template.rules` | `./.claude/rules/` |
+
+## Fork
+
+The `fork` command enables parallel autonomous agent execution. Each task in
+`.tasks/` gets its own git worktree, branch, and Docker Desktop sandbox. Agents
+work independently and results come back as branches ready for rebase/merge.
+
+Requires Docker Desktop 4.50+ with sandbox support.
+
+### Task files
+
+Create a `.tasks/` directory at your repo root with markdown files describing
+units of work:
+
+```
+.tasks/
+  refactor-auth.md
+  add-tests.md
+  update-docs.md
+```
+
+Each `.md` file is the prompt given to the sandboxed Claude Code agent.
+
+### Commands
+
+```bash
+# Fork all tasks in .tasks/
+corpo-claude fork
+
+# Fork a single task
+corpo-claude fork .tasks/refactor-auth.md
+
+# Show running/completed forks
+corpo-claude fork status
+
+# Attach to a running sandbox (manage terminal layout with tmux)
+corpo-claude fork attach refactor-auth
+
+# Clean up finished worktrees (prompts to delete branches)
+corpo-claude fork clean
+```
+
+### How it works
+
+For each task file (`foo.md`):
+
+1. Creates a git worktree at `.worktrees/foo` on branch `fork/foo`
+2. Copies the task file into the worktree root as `TASK.md`
+3. Launches a Docker sandbox with the task content as the prompt
+4. The agent works independently on its branch
+
+### Credentials
+
+Docker Desktop sandbox automatically injects host credentials (API keys,
+gcloud ADC, AWS credentials) into the sandbox environment. No manual
+configuration is needed — whatever authentication is configured on your host
+machine is available to the sandboxed agents.
 
 ## Auth Validation
 

@@ -108,6 +108,15 @@ check_skills_dependencies() {
   return 0
 }
 
+# ── Sandbox dependency check ──────────────────────────────────
+
+# Checks for Docker, required by fork commands.
+# Returns 0 if docker is available, 1 otherwise.
+check_sandbox_dependencies() {
+  check_dependency "docker" "brew install --cask docker  (https://www.docker.com/products/docker-desktop/)" || return 1
+  return 0
+}
+
 # ── Path helpers ───────────────────────────────────────────────
 
 # Resolve a path relative to the corpo-claude repo root.
