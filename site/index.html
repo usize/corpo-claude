@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>corpo-claude — Standardize Claude Code across teams</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Hero -->
+  <section class="hero">
+    <img src="../corpo-claude.png" alt="corpo-claude logo" class="logo">
+    <h1>corpo-claude</h1>
+    <p class="tagline">Standardize Claude Code across teams</p>
+    <div class="install-block">
+      <pre><code id="install-cmd">curl -sL https://corpo-claude.dev/install.sh | bash</code></pre>
+      <button class="copy-btn" onclick="copyInstall()" aria-label="Copy to clipboard">
+        <span id="copy-label">Copy</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- What it does -->
+  <section class="features">
+    <h2>What it does</h2>
+    <div class="card-row">
+      <div class="card">
+        <h3>Skills</h3>
+        <p>Install and share Claude Code slash commands across your team</p>
+      </div>
+      <div class="card">
+        <h3>Profiles</h3>
+        <p>Bundle provider config, MCP servers, hooks, and CLAUDE.md into one installable unit</p>
+      </div>
+      <div class="card">
+        <h3>Fork</h3>
+        <p>Launch parallel Claude agents in isolated git worktrees with Docker sandboxes</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Quick start -->
+  <section class="quickstart">
+    <h2>Quick start</h2>
+    <div class="terminal">
+      <div class="terminal-header">
+        <span class="dot red"></span>
+        <span class="dot yellow"></span>
+        <span class="dot green"></span>
+      </div>
+      <pre><code><span class="prompt">$</span> corpo-claude registry add myorg/claude-config
+<span class="prompt">$</span> corpo-claude skill install review --global
+<span class="prompt">$</span> corpo-claude profile install --profile backend
+<span class="prompt">$</span> corpo-claude fork</code></pre>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <p>Built with Claude Code</p>
+    <a href="https://github.com/mofoster/corpo-claude">GitHub</a>
+  </footer>
+
+  <script>
+    function copyInstall() {
+      const text = document.getElementById('install-cmd').textContent;
+      navigator.clipboard.writeText(text).then(() => {
+        const label = document.getElementById('copy-label');
+        label.textContent = 'Copied!';
+        setTimeout(() => { label.textContent = 'Copy'; }, 2000);
+      });
+    }
+  </script>
+
+</body>
+</html>
